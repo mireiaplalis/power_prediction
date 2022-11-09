@@ -1,0 +1,8 @@
+Requirement already satisfied: pandas in /home/jochem/.local/lib/python3.8/site-packages (1.5.1)
+Collecting pytz>=2020.1
+  Downloading pytz-2022.6-py2.py3-none-any.whl (498 kB)
+Requirement already satisfied: python-dateutil>=2.8.1 in /home/jochem/.local/lib/python3.8/site-packages (from pandas) (2.8.1)
+Requirement already satisfied: numpy>=1.20.3; python_version < "3.10" in /home/jochem/.local/lib/python3.8/site-packages (from pandas) (1.23.4)
+Requirement already satisfied: six>=1.5 in /usr/lib/python3/dist-packages (from python-dateutil>=2.8.1->pandas) (1.14.0)
+Installing collected packages: pytz
+Successfully installed pytz-2022.6
