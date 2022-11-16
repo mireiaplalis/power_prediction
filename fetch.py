@@ -30,7 +30,7 @@ def main():
 	log = logging.getLogger(__name__)
 
 	# Progressbar for fun
-	bar = get_progressbar
+	bar = get_progressbar()
 	bar.start()
 
 	# Initialize and fill dataframe
