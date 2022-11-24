@@ -51,7 +51,10 @@ def plot_inflows(inflows: pd.Series, country_list: list[str]) -> None:
 		projection="mercator",
 		color_continuous_scale='greys')
 	fig.update_geos(fitbounds="locations", visible=False)
-	fig.show()
+	fig.update_coloraxes(showscale=False)
+	fig.update_layout(width=512, height=512)
+	fig.write_image("test.png")
+	#fig.show()
 
 def main():
 	if len(sys.argv) < 2:
