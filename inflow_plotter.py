@@ -2,6 +2,7 @@ import logging
 import os
 import pandas as pd
 import plotly
+from tqdm import tqdm
 import plotly.express as px
 from entsoe.geo.utils import load_zones
 
@@ -57,7 +58,8 @@ class InflowPlotter:
 		# Create output directory if needed
 		os.makedirs(output_dir, exist_ok=True)
 
-		for index, rows in self.inflow_data.iterrows():
+		bar = tqdm(total=len(self.inflow_data.index))
+		for index, _ in self.inflow_data.iterrows():
 			#print(str(index))
 			#print(index)
 			index_str = str(index)
@@ -67,3 +69,6 @@ class InflowPlotter:
 
 			path = os.path.join(output_dir, index_str + ".png")
 			figure.write_image(path, format="png", )
+
+			bar.update()
+		bar.close()
