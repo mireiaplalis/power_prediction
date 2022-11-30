@@ -5,6 +5,7 @@ import plotly
 from tqdm import tqdm
 import plotly.express as px
 from entsoe.geo.utils import load_zones
+import numpy as np
 
 TIMEZONE="Europe/Brussels"
 
@@ -53,6 +54,29 @@ class InflowPlotter:
 		fig.update_geos(fitbounds="locations", visible=False)
 		
 		return fig
+	
+	def create_flow_matrix(self, timestamp: pd.Timestamp) -> np.ndarray:
+		# Round timestamp to nearest hour
+		rounded_timestamp = timestamp.floor(freq='H')
+		if rounded_timestamp != timestamp:
+			warn_string="Rounded timestamp {} down to {}."
+			self.log.warning(warn_string.format(timestamp, rounded_timestamp))
+
+		n_countries = len(self.zone_list)
+		flow_matrix = np.zeros((n_countries, n_countries))
+
+		ind = {}
+		for i, country in enumerate(self.zone_list):
+			ind[country] = i
+
+		time_entry = self.inflow_data.loc[rounded_timestamp]
+		time_entry = time_entry.fillna(0)
+		for name, values in time_entry.items():
+			# Cast to string because name is a hashable (whatever that may be)
+			country_from, country_to = str(name).split('>')
+			flow_matrix[ind[country_from]][ind[country_to]] = values
+		return flow_matrix
+		
 
 	def generate_all(self, output_dir, res: int=512):
 		# Create output directory if needed
