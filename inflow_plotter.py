@@ -78,21 +78,36 @@ class InflowPlotter:
 		return flow_matrix
 		
 
-	def generate_all(self, output_dir, res: int=512):
+	def generate_all(self, figure_output, timestamp_output, res: int=512, format="matrices"):
 		# Create output directory if needed
-		os.makedirs(output_dir, exist_ok=True)
+		os.makedirs(os.path.dirname(figure_output), exist_ok=True)
+		os.makedirs(os.path.dirname(timestamp_output), exist_ok=True)
 
 		bar = tqdm(total=len(self.inflow_data.index))
+		figure_list = []
+		timestamp_list = []
 		for index, _ in self.inflow_data.iterrows():
-			#print(str(index))
-			#print(index)
 			index_str = str(index)
-			figure = self.plot_timestamp(pd.Timestamp(index_str))
-			figure.update_coloraxes(showscale=False)
-			figure.update_layout(width=res, height=res)
+			timestamp = pd.Timestamp(index_str)
+			unix_timestamp = int(timestamp.timestamp())
+			timestamp_list.append(unix_timestamp)
 
-			path = os.path.join(output_dir, index_str + ".png")
-			figure.write_image(path, format="png", )
+			figure = None
+
+			if format == "matrices":
+				figure = self.create_flow_matrix(pd.Timestamp(index_str))
+				figure_list.append(figure)
+
+			# elif format == "images":
+			# 	figure = self.plot_timestamp(pd.Timestamp(index_str))
+			# 	figure.update_coloraxes(showscale=False)
+			# 	figure.update_layout(width=res, height=res)
+			# 	figure_list.append(figure)
 
 			bar.update()
+		
+		figure_array = np.expand_dims(np.array(figure_list), axis=-1)
+		np.save(figure_output, figure_array)
+		timestamp_array = np.array(timestamp_list, dtype='datetime64[s]')
+		np.save(timestamp_output, timestamp_array)
 		bar.close()
