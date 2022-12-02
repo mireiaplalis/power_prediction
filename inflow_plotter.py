@@ -1,11 +1,13 @@
 import logging
 import os
+import io
 import pandas as pd
 import plotly
 from tqdm import tqdm
 import plotly.express as px
 from entsoe.geo.utils import load_zones
 import numpy as np
+from PIL import Image
 
 TIMEZONE="Europe/Brussels"
 
@@ -78,7 +80,7 @@ class InflowPlotter:
 		return flow_matrix
 		
 
-	def generate_all(self, figure_output, timestamp_output, res: int=512, format="matrices"):
+	def generate_all(self, figure_output, timestamp_output, res: int=256, format="matrices"):
 		# Create output directory if needed
 		os.makedirs(os.path.dirname(figure_output), exist_ok=True)
 		os.makedirs(os.path.dirname(timestamp_output), exist_ok=True)
@@ -98,11 +100,14 @@ class InflowPlotter:
 				figure = self.create_flow_matrix(pd.Timestamp(index_str))
 				figure_list.append(figure)
 
-			# elif format == "images":
-			# 	figure = self.plot_timestamp(pd.Timestamp(index_str))
-			# 	figure.update_coloraxes(showscale=False)
-			# 	figure.update_layout(width=res, height=res)
-			# 	figure_list.append(figure)
+			elif format == "images":
+				figure = self.plot_timestamp(pd.Timestamp(index_str))
+				figure.update_coloraxes(showscale=False)
+				figure.update_layout(width=res, height=res)
+				buf = io.BytesIO(figure.to_image(format="png"))
+				img = Image.open(buf)
+				figure_array = np.asarray(img)
+				figure_list.append(figure)
 
 			bar.update()
 		
