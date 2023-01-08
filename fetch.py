@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 import entsoe as ee
@@ -26,6 +27,7 @@ def main():
 		sys.stderr.write("Usage: fetch.py <output_file>")
 		exit()
 	filename = sys.argv[1]
+	os.makedirs(os.path.dirname(filename), exist_ok=True)
 	client = ee.EntsoePandasClient(api_key=API_KEY)
 	log = logging.getLogger(__name__)
 
