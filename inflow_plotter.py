@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 
 
 TIMEZONE="Europe/Brussels"
+MAP_TIMESTAMP = pd.Timestamp("2021-12-31 22:00:00+00:00")
 
 
 class InflowPlotter:
@@ -47,7 +48,7 @@ class InflowPlotter:
 		inflows = pd.Series(inflows)
 		
 		# Plot (save and show as desired)
-		geo_df = load_zones(self.zone_list, rounded_timestamp.tz_localize(None), allow_cala=True)
+		geo_df = load_zones(self.zone_list, MAP_TIMESTAMP.tz_localize(None))
 		inflows.name = "inflows"
 		df = geo_df.join(inflows)
 		fig = px.choropleth(df,
@@ -69,25 +70,16 @@ class InflowPlotter:
 			timestamp = pd.Timestamp(index_str)
 			rounded_timestamp = timestamp.floor(freq='H')
 			if timestamp.tz_localize(None) < pd.Timestamp('2021-01-01'):
-				print("hello")
 				time_entry = self.inflow_data.loc[rounded_timestamp]
 				for name, _ in time_entry.items():
-					print("hey")
 					country_from, country_to = str(name).split('>')
-					print("hey 2")
 					if country_from == "IT_SUD":
 						self.inflow_data["IT_SUD"+">"+country_to] /= 2
 						self.inflow_data["IT_CALA"+">"+country_to] = self.inflow_data["IT_SUD"+">"+country_to]
-					print("hey 3")
 					if country_to == "IT_SUD":
 						it = 0
-						print("hey 4")
 						self.inflow_data[country_from+">"+"IT_SUD"] /= 2
-						print("hey 5")
 						self.inflow_data[country_from+">"+"IT_CALA"] = self.inflow_data[country_from+">"+"IT_SUD"]	
-					print("hey 6")
-					print(name)
-				print(timestamp)
 			bar.update()					
 
 	
@@ -141,7 +133,6 @@ class InflowPlotter:
 					figure = self.plot_timestamp(pd.Timestamp(index_str))
 					figure.update_coloraxes(showscale=False)
 					figure.update_layout(width=res, height=res)
-					plt.savefig(figure_output + index_str + ".png")
 					buf = io.BytesIO(figure.to_image(format="png"))
 					img = Image.open(buf)
 					figure_array = np.asarray(img)
