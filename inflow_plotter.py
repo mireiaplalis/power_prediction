@@ -29,11 +29,18 @@ class InflowPlotter:
 		except:
 			raise RuntimeError("Failed to read data from file {}".format(inflow_data))
 
+		# compute inflows and outflows and determine min and max
+		self.inflows, self.outflows = self.aggregate_flows()
+		self.min_inflow = self.inflows.min().min()
+		self.max_inflow = self.inflows.max().max()
+		self.min_outflow = self.outflows.min().min()
+		self.max_outflow = self.outflows.max().max()
+
 		# Get geopandas map
 		self.zone_list = zone_list
 		self.geo_df = load_zones(self.zone_list, MAP_TIMESTAMP.tz_localize(None))
 
-		# Plotting things
+		# Plotting details
 		mplstyle.use('fast')
 		self.fig, self.ax = plt.subplots(figsize=(2.56, 2.56))
 		self.fig.tight_layout()
@@ -41,63 +48,76 @@ class InflowPlotter:
 		self.ax.set_facecolor("black")
 		self.ax.axis('off')
 		self.ax.set_position([0, 0, 1, 1])
-		self.min_flow = self.inflow_data.min().min()
-		self.max_flow = self.inflow_data.max().max()
-		print("min flow: {}".format(self.min_flow))
-		print("max flow: {}".format(self.max_flow))
 
-	
+	def aggregate_flows(self):
+		inflow_list = []
+		outflow_list = []
+		timestamp_list = []
+		for index, _ in self.inflow_data.iterrows():
+			index_str = str(index)
+			timestamp = pd.Timestamp(index_str)
+			inflows = {}
+			outflows = {}
+			for name, values in self.inflow_data.loc[timestamp].items():
+				country_from, country_to = str(name).split('>')
+				inflows.setdefault(country_to, 0)
+				outflows.setdefault(country_from, 0)
+				inflows[country_to] += values
+				outflows[country_from] += values
+			inflow_list.append(inflows)
+			outflow_list.append(outflows)
+			timestamp_list.append(timestamp)
+		inflow_df = pd.DataFrame(data=inflow_list, index=timestamp_list)
+		outflow_df = pd.DataFrame(data=outflow_list, index=timestamp_list)
+
+		return inflow_df, outflow_df
 
 	def plot_timestamp(self, timestamp: pd.Timestamp):
-		comp_time = time.time()
-		# Round timestamp to nearest hour
+		# Round timestamp to nearest hour (should not be needed)
 		rounded_timestamp = timestamp.floor(freq='H')
 		if rounded_timestamp != timestamp:
 			warn_string="Rounded timestamp {} down to {}."
 			self.log.warning(warn_string.format(timestamp, rounded_timestamp))
 
-		# Accumulate inflow for every bidding zone
-		inflows = {}
-		time_entry = self.inflow_data.loc[rounded_timestamp]
-		for name, values in time_entry.items():
-			# Cast to string because name is a hashable (whatever that may be)
-			country_from, country_to = str(name).split('>')
-			inflows.setdefault(country_to, 0)
-			inflows[country_to] += values
-		inflows = pd.Series(inflows)
-		print("POLAN: ")
-		print(inflows["IT_NORD"])
-		
-		# Plot (save and show as desired)
+		# Determine in- and outflows
+		inflows = self.inflows.loc[timestamp]
+		outflows = self.outflows.loc[timestamp]
 		inflows.name = "inflows"
+		outflows.name = "outflows"
+
+		# Plot inflow
 		df = self.geo_df.join(inflows)
-		print("Comp time: {}".format(time.time() - comp_time))
-		# fig = px.choropleth(df,
-		# 	geojson=df.geometry,
-		# 	locations=df.index,
-		# 	color="inflows",
-		# 	projection="mercator",
-		# 	color_continuous_scale='greys')
-		# fig.update_geos(fitbounds="locations", visible=False)
-		plt_time = time.time()
 		df.plot(
 			column="inflows",
 			cmap="gray",
-			vmin=self.min_flow,
-			vmax=self.max_flow,
+			vmin=self.min_inflow,
+			vmax=self.max_inflow,
 			legend=False,
 			antialiased=False,
 			ax=self.ax
 		)
 		self.fig.canvas.draw()
-		print("plt time: {}".format(time.time() - plt_time))
-		arr_time = time.time()
-		arr = np.array(self.fig.canvas.renderer.buffer_rgba())[:, :, 0]
-		print("arr shape: {}".format(arr.shape))
+		in_arr = np.array(self.fig.canvas.renderer.buffer_rgba())[:, :, 0]
 		self.ax.clear()
-		print("arr time: {}".format(time.time() - arr_time))
+
+		# Plot outflow
+		df = self.geo_df.join(outflows)
+		df.plot(
+			column="outflows",
+			cmap="gray",
+			vmin=self.min_outflow,
+			vmax=self.max_outflow,
+			legend=False,
+			antialiased=False,
+			ax=self.ax
+		)
+		self.fig.canvas.draw()
+		out_arr = np.array(self.fig.canvas.renderer.buffer_rgba())[:, :, 0]
+		self.ax.clear()
+
+		# Stack and return
+		arr = np.stack((in_arr, out_arr), axis=-1)
 		return arr
-	
 	def create_flow_matrix(self, timestamp: pd.Timestamp) -> np.ndarray:
 		# Round timestamp to nearest hour
 		rounded_timestamp = timestamp.floor(freq='H')
@@ -133,36 +153,21 @@ class InflowPlotter:
 		##### DEBUG #####
 		for i, (index, _) in enumerate(self.inflow_data.iterrows()):
 			#if i % (365 * 100) == 0:
+				# Determine timestamp
 				index_str = str(index)
 				timestamp = pd.Timestamp(index_str)
 				unix_timestamp = int(timestamp.timestamp())
 				timestamp_list.append(unix_timestamp)
 
+				# Generate desired format
 				figure = None
-
 				if format == "matrices":
 					figure = self.create_flow_matrix(pd.Timestamp(index_str))
-					figure_list.append(figure)
-
 				elif format == "images":
-					iteration_time = time.time()
-					plot_time = time.time()
 					figure = self.plot_timestamp(pd.Timestamp(index_str))
-					print("Plot time: {}".format(time.time() - plot_time))
-					# update_time = time.time()
-					# figure.update_coloraxes(showscale=False)
-					# figure.update_layout(width=res, height=res)
-					# print("Update time: {}".format(time.time()-update_time))
-					# conversion_time = time.time()
-					# buf = io.BytesIO(figure.to_image(format="png"))
-					# img = Image.open(buf)
-					# figure_array = np.asarray(img)
-					# figure_list.append(figure)
-					figure_list.append(figure)
-					#print("Conversion time: {}".format(time.time()-conversion_time))
-					print("iteration time: {}".format(time.time()-plot_time))
 
-
+				# Append
+				figure_list.append(figure)
 				bar.update()
 		
 		figure_array = np.expand_dims(np.array(figure_list), axis=-1)
