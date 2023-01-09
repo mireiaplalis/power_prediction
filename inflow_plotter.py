@@ -80,8 +80,18 @@ class InflowPlotter:
 						it = 0
 						self.inflow_data[country_from+">"+"IT_SUD"] /= 2
 						self.inflow_data[country_from+">"+"IT_CALA"] = self.inflow_data[country_from+">"+"IT_SUD"]	
-			bar.update()					
-
+			if timestamp.tz_localize(None) < pd.Timestamp('2018-10-01'):
+				time_entry = self.inflow_data.loc[rounded_timestamp]
+				for name, _ in time_entry.items():
+					country_from, country_to = str(name).split('>')
+					if country_from == "DE_AT_LU":
+						self.inflow_data["DE_LU"+">"+country_to] = self.inflow_data["DE_AT_LU"+">"+country_to] / 2
+						self.inflow_data["AT"+">"+country_to] = self.inflow_data["DE_AT_LU"+">"+country_to] / 2
+					if country_to == "DE_AT_LU":
+						it = 0
+						self.inflow_data[country_from+">"+"DE_LU"] = self.inflow_data[country_from+">"+"DE_AT_LU"] / 2
+						self.inflow_data[country_from+">"+"AT"] = self.inflow_data[country_from+">"+"DE_AT_LU"] / 2	
+			bar.update()
 	
 	def create_flow_matrix(self, timestamp: pd.Timestamp) -> np.ndarray:
 		# Round timestamp to nearest hour
@@ -140,32 +150,6 @@ class InflowPlotter:
 
 
 				bar.update()
-
-
-
-		##################
-		# for index, _ in self.inflow_data.iterrows():
-		# 	index_str = str(index)
-		# 	timestamp = pd.Timestamp(index_str)
-		# 	unix_timestamp = int(timestamp.timestamp())
-		# 	timestamp_list.append(unix_timestamp)
-
-		# 	figure = None
-
-		# 	if format == "matrices":
-		# 		figure = self.create_flow_matrix(pd.Timestamp(index_str))
-		# 		figure_list.append(figure)
-
-		# 	elif format == "images":
-		# 		figure = self.plot_timestamp(pd.Timestamp(index_str))
-		# 		figure.update_coloraxes(showscale=False)
-		# 		figure.update_layout(width=res, height=res)
-		# 		buf = io.BytesIO(figure.to_image(format="png"))
-		# 		img = Image.open(buf)
-		# 		figure_array = np.asarray(img)
-		# 		figure_list.append(figure)
-
-		# 	bar.update()
 		
 		figure_array = np.expand_dims(np.array(figure_list), axis=-1)
 		np.save(figure_output, figure_array)
