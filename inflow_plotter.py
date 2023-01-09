@@ -26,7 +26,6 @@ class InflowPlotter:
 			self.inflow_data = pd.read_csv(inflow_data, parse_dates=True, index_col=0)
 		except:
 			raise RuntimeError("Failed to read data from file {}".format(inflow_data))
-		self.data_preprocessing()
 	
 
 	def plot_timestamp(self, timestamp: pd.Timestamp) -> plotly.graph_objs.Figure:
@@ -60,38 +59,6 @@ class InflowPlotter:
 		fig.update_geos(fitbounds="locations", visible=False)
 		fig.show()
 		return fig
-
-	def data_preprocessing(self):
-		self.inflow_data.fillna(0)
-		print("Data preprocessing")
-		bar = tqdm(total=len(self.inflow_data.index))
-		for index, _ in self.inflow_data.iterrows():
-			index_str = str(index)
-			timestamp = pd.Timestamp(index_str)
-			rounded_timestamp = timestamp.floor(freq='H')
-			if timestamp.tz_localize(None) < pd.Timestamp('2021-01-01'):
-				time_entry = self.inflow_data.loc[rounded_timestamp]
-				for name, _ in time_entry.items():
-					country_from, country_to = str(name).split('>')
-					if country_from == "IT_SUD":
-						self.inflow_data["IT_SUD"+">"+country_to] /= 2
-						self.inflow_data["IT_CALA"+">"+country_to] = self.inflow_data["IT_SUD"+">"+country_to]
-					if country_to == "IT_SUD":
-						it = 0
-						self.inflow_data[country_from+">"+"IT_SUD"] /= 2
-						self.inflow_data[country_from+">"+"IT_CALA"] = self.inflow_data[country_from+">"+"IT_SUD"]	
-			if timestamp.tz_localize(None) < pd.Timestamp('2018-10-01'):
-				time_entry = self.inflow_data.loc[rounded_timestamp]
-				for name, _ in time_entry.items():
-					country_from, country_to = str(name).split('>')
-					if country_from == "DE_AT_LU":
-						self.inflow_data["DE_LU"+">"+country_to] = self.inflow_data["DE_AT_LU"+">"+country_to] / 2
-						self.inflow_data["AT"+">"+country_to] = self.inflow_data["DE_AT_LU"+">"+country_to] / 2
-					if country_to == "DE_AT_LU":
-						it = 0
-						self.inflow_data[country_from+">"+"DE_LU"] = self.inflow_data[country_from+">"+"DE_AT_LU"] / 2
-						self.inflow_data[country_from+">"+"AT"] = self.inflow_data[country_from+">"+"DE_AT_LU"] / 2	
-			bar.update()
 	
 	def create_flow_matrix(self, timestamp: pd.Timestamp) -> np.ndarray:
 		# Round timestamp to nearest hour
