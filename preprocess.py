@@ -8,6 +8,11 @@ def preprocess(input_file, output_file):
 
 	print("Data preprocessing")
 
+	### Remove odd duplicates (they are also only one-way)
+	df = df.drop(["FR>IT_NORD_FR"], axis=1)
+	df = df.drop(["CH>IT_NORD_CH"], axis=1)
+
+
 	### SUD, CALA mess: pretend IT_CALA exists everywhere
 	ts = pd.Timestamp('2021-01-01 00:00:00+00:00')
 
